@@ -18,6 +18,9 @@ type Ipfs struct {
 
 func (ipfs Ipfs) GetLatestXRates(dCcy string, fCcy string, exchange string) (string, error) {
 
+	fCcy = strings.ToUpper(fCcy)
+	dCcy = strings.ToUpper(dCcy)
+
 	respStr, err := httputil.DoGet(
 		6, ipfs.Conf.URL, "ipns/"+ipfs.Conf.IpnsID+"/xrates/latest/"+fCcy+"/index.json", "")
 

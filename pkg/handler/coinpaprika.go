@@ -17,6 +17,10 @@ func init() {
 }
 
 func (coinp CoinPaprika) GetLatestXRates(dCcy string, Ccy string, exchange string) (string, error) {
+
+	if dCcy != "" {
+	}
+
 	return "", nil
 }
 

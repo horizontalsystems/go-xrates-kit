@@ -1,8 +1,11 @@
 package main
 
-import "github.com/horizontalsystems/xrates-kit/pkg/service"
-import "fmt"
-import "time"
+import (
+	"fmt"
+	"time"
+
+	"github.com/horizontalsystems/xrates-kit/pkg/service/xrates"
+)
 
 func main() {
 
@@ -16,6 +19,6 @@ func main() {
 	}
 	fmt.Println(t)
 
-	fmt.Println("Getting Data:", service.GetXRates("BTC", "USD", "", t.Unix()))
+	fmt.Println("Getting Data:", xrates.Get("BTC", "USD", "", t.Unix()))
 
 }
