@@ -4,10 +4,10 @@ package handler
 type XRates interface {
 
 	// GetLatestXRates gets latest rates of source and target currencies
-	GetLatestXRates(cCoin string, fCcy string, exchange string) (string, error)
+	GetLatestXRatesAsJSON(cCoin string, fCcy string, exchange string) (string, error)
 
 	// Fetches rates by Unix epoch time
-	GetXRates(cCoin string, fCcy string, exchange string, epochSec *int64) (string, error)
+	GetXRatesAsJSON(cCoin string, fCcy string, exchange string, epochSec *int64) (string, error)
 }
 
 // LatestXRatesData is a container for latest exchange rates
