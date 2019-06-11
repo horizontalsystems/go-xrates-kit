@@ -16,7 +16,7 @@ type Ipfs struct {
 	Conf *config.IpfsConfig
 }
 
-func (ipfs Ipfs) GetLatestXRates(dCcy string, fCcy string, exchange string) (string, error) {
+func (ipfs *Ipfs) GetLatestXRatesAsJSON(dCcy string, fCcy string, exchange string) (string, error) {
 
 	respStr, err := httputil.DoGet(
 		6, ipfs.Conf.URL, "ipns/"+ipfs.Conf.IpnsID+"/xrates/latest/"+fCcy+"/index.json", "")
@@ -33,7 +33,7 @@ func (ipfs Ipfs) GetLatestXRates(dCcy string, fCcy string, exchange string) (str
 	return respStr, err
 }
 
-func (ipfs Ipfs) GetXRates(dCcy string, fCcy string, exchange string, epochSec *int64) (string, error) {
+func (ipfs *Ipfs) GetXRatesAsJSON(dCcy string, fCcy string, exchange string, epochSec *int64) (string, error) {
 
 	var uriPathMinute, uriPathDay string
 
@@ -74,13 +74,13 @@ func (ipfs Ipfs) GetXRates(dCcy string, fCcy string, exchange string, epochSec *
 		}
 	}
 
-	dataS := reformatResponse(respStr, dCcy, fCcy, &timeSecObj)
+	dataS := reformatIPFSResponse(respStr, dCcy, fCcy, &timeSecObj)
 
 	return dataS, err
 }
 
 //Change response json to XRates compatible format
-func reformatResponse(jsonData string, dCcy string, fCcy string, timeObj *time.Time) string {
+func reformatIPFSResponse(jsonData string, dCcy string, fCcy string, timeObj *time.Time) string {
 
 	var rate string
 

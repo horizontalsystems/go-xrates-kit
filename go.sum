@@ -1,5 +1,3 @@
-github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
-github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/coinpaprika/coinpaprika-api-go-client v2.4.0+incompatible h1:xDSI8VuSm+i97LfchRg1AsfX7HZ5JUrouLYBL993Ufg=
 github.com/coinpaprika/coinpaprika-api-go-client v2.4.0+incompatible/go.mod h1:/Wyq4jTLPHVwBBo8xJRmEhZ2VeA1eD3mSjcT07YwsSo=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=

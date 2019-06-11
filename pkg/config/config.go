@@ -1,13 +1,12 @@
 package config
 
-//"github.com/BurntSushi/toml"
+var conf MainConfig
 
-var conf Config
-
-// Config is a main configuration Object
-type Config struct {
+// MainConfig is a main configuration Object
+type MainConfig struct {
 	Ipfs        IpfsConfig
 	CoinPaprika CoinPaprikaConfig
+	FiatXRates  FiatXRatesConfig
 }
 
 //IpfsConfig conf object
@@ -22,29 +21,32 @@ type CoinPaprikaConfig struct {
 	APIURL string
 }
 
+//FiatXRatesConfig conf object
+type FiatXRatesConfig struct {
+	APIURL string
+}
+
 func init() {
 	Load()
 }
 
 // Load config file
-func Load() Config {
+func Load() MainConfig {
 
-	// if _, err := toml.DecodeFile("../../cmd/config.toml", &conf); err != nil {
-	// 	//fmt.Println(err)
-	// }
-
-	conf = Config{
+	conf = MainConfig{
 		IpfsConfig{
 			"https://ipfs-ext.horizontalsystems.xyz",
 			"https://ipfs.io",
-			"QmXTJZBMMRmBbPun6HFt3tmb3tfYF2usLPxFoacL7G5uMX",
-		}, CoinPaprikaConfig{
-			"https://api.coinpaprika.com/v1"}}
+			"QmXTJZBMMRmBbPun6HFt3tmb3tfYF2usLPxFoacL7G5uMX"},
+		CoinPaprikaConfig{
+			"https://api.coinpaprika.com/v1"},
+		FiatXRatesConfig{
+			"https://api.exchangeratesapi.io"}}
 
 	return conf
 }
 
 // Get config object
-func Get() Config {
-	return conf
+func Get() *MainConfig {
+	return &conf
 }

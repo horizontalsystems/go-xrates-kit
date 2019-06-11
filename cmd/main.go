@@ -1,21 +1,29 @@
 package main
 
-import "github.com/horizontalsystems/xrates-kit/pkg/service"
-import "fmt"
-import "time"
+import (
+	"fmt"
+
+	"github.com/horizontalsystems/xrates-kit/pkg/config"
+	"github.com/horizontalsystems/xrates-kit/pkg/handler"
+	"github.com/horizontalsystems/xrates-kit/pkg/service"
+	dtutils "github.com/horizontalsystems/xrates-kit/pkg/util/datetime"
+)
 
 func main() {
 
-	layout := "2006-01-02T15:04:05.000Z"
-	str := "2017-05-01T11:45:26.371Z"
-	t, err := time.Parse(layout, str)
+	t := dtutils.StrToTime("", "2019-06-04T05:45:26.371Z")
 
-	t = t.UTC()
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(t)
+	//var conf = config.Get()
 
-	fmt.Println("Getting Data:", service.GetXRates("BTC", "USD", "", t.Unix()))
+	tunix := t.UTC().Unix()
+
+	xratesService := new(service.XRatesService)
+	xratesService.Init()
+
+	//fmt.Println("Getting Data:", xratesService.Get("BTC", "USD", "", t.Unix()))
+
+	cpHandler := handler.CoinPaprika{&config.Get().CoinPaprika}
+	resp, _ := cpHandler.GetXRatesAsJSON("BTC", "TRY", "", &tunix)
+	fmt.Println("Getting Data:", resp)
 
 }
