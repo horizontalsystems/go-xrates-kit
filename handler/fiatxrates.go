@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/horizontalsystems/xrates-kit/pkg/config"
-	dtutil "github.com/horizontalsystems/xrates-kit/pkg/util/datetime"
-	httputil "github.com/horizontalsystems/xrates-kit/pkg/util/http"
+	"github.com/horizontalsystems/xrates-kit/config"
+	dtutil "github.com/horizontalsystems/xrates-kit/util/datetime"
+	httputil "github.com/horizontalsystems/xrates-kit/util/http"
 )
 
 // -------------------------------

@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/coinpaprika/coinpaprika-api-go-client/coinpaprika"
-	"github.com/horizontalsystems/xrates-kit/pkg/config"
-	"github.com/horizontalsystems/xrates-kit/pkg/currency"
+	"github.com/horizontalsystems/xrates-kit/config"
+	"github.com/horizontalsystems/xrates-kit/currency"
 )
 
 var coinpClient *coinpaprika.Client

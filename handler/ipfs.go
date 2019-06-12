@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/horizontalsystems/xrates-kit/pkg/config"
-	httputil "github.com/horizontalsystems/xrates-kit/pkg/util/http"
+	"github.com/horizontalsystems/xrates-kit/config"
+	httputil "github.com/horizontalsystems/xrates-kit/util/http"
 )
 
 //Ipfs handler object

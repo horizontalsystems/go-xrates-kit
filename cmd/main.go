@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/horizontalsystems/xrates-kit/pkg/config"
-	"github.com/horizontalsystems/xrates-kit/pkg/handler"
-	"github.com/horizontalsystems/xrates-kit/pkg/service"
-	dtutils "github.com/horizontalsystems/xrates-kit/pkg/util/datetime"
+	"github.com/horizontalsystems/xrates-kit/config"
+	"github.com/horizontalsystems/xrates-kit/handler"
+	"github.com/horizontalsystems/xrates-kit/kit"
+	dtutils "github.com/horizontalsystems/xrates-kit/util/datetime"
 )
 
 func main() {
@@ -17,7 +17,7 @@ func main() {
 
 	tunix := t.UTC().Unix()
 
-	xratesService := new(service.XRatesService)
+	xratesService := new(kit.XRatesKit)
 	xratesService.Init()
 
 	//fmt.Println("Getting Data:", xratesService.Get("BTC", "USD", "", t.Unix()))

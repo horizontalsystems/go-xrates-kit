@@ -1,26 +1,26 @@
-package service
+package kit
 
 import (
 	"strings"
 
-	"github.com/horizontalsystems/xrates-kit/pkg/config"
-	"github.com/horizontalsystems/xrates-kit/pkg/handler"
+	"github.com/horizontalsystems/xrates-kit/config"
+	"github.com/horizontalsystems/xrates-kit/handler"
 )
 
-type XRatesService struct {
+type XRatesKit struct {
 	conf                     *config.MainConfig
 	ipfsHandler, coinPaprika handler.XRates
 }
 
 // Init x-rates service, init and load configurations for Handlers
-func (xratesSrv *XRatesService) Init() {
+func (xratesSrv *XRatesKit) Init() {
 	xratesSrv.conf = config.Get()
 	xratesSrv.ipfsHandler = &handler.Ipfs{&(xratesSrv.conf.Ipfs)}
 	xratesSrv.coinPaprika = &handler.CoinPaprika{&xratesSrv.conf.CoinPaprika}
 }
 
 // GetLatest gets latest rates of source and target currencies
-func (xratesSrv *XRatesService) GetLatest(
+func (xratesSrv *XRatesKit) GetLatest(
 	digCurrency string, fiatCurrency string, exchange string) string {
 
 	data, err := xratesSrv.ipfsHandler.GetLatestXRatesAsJSON(digCurrency, fiatCurrency, exchange)
@@ -44,7 +44,7 @@ func (xratesSrv *XRatesService) GetLatest(
 }
 
 // Get method gets rates by Unix EPOCH date
-func (xratesSrv *XRatesService) Get(
+func (xratesSrv *XRatesKit) Get(
 	digCurrency string, fiatCurrency string, exchange string, epochSec int64) string {
 
 	fiatCurrency = strings.ToUpper(fiatCurrency)
