@@ -5,11 +5,11 @@ import (
 
 	//"time"
 
-	"github.com/horizontalsystems/xrates-kit/kit"
-	"github.com/horizontalsystems/xrates-kit/handler"
-	"github.com/horizontalsystems/xrates-kit/config"
+	"github.com/horizontalsystems/go-xrates-kit/config"
+	"github.com/horizontalsystems/go-xrates-kit/handler"
+	"github.com/horizontalsystems/go-xrates-kit/kit"
 
-	dtutils "github.com/horizontalsystems/xrates-kit/util/datetime"
+	dtutils "github.com/horizontalsystems/go-xrates-kit/util/datetime"
 )
 
 func main() {

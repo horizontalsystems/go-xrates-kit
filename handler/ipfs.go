@@ -3,15 +3,14 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/horizontalsystems/xrates-kit/models"
+	"github.com/horizontalsystems/go-xrates-kit/models"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/horizontalsystems/xrates-kit/config"
-	httputil "github.com/horizontalsystems/xrates-kit/util/http"
+	"github.com/horizontalsystems/go-xrates-kit/config"
+	httputil "github.com/horizontalsystems/go-xrates-kit/util/http"
 )
-
 
 //Ipfs handler object
 type Ipfs struct {
@@ -21,12 +20,12 @@ type Ipfs struct {
 func (ipfs *Ipfs) GetLatestXRates(coinCode string, currencyCode string, exchange string) (
 	*models.LatestXRate, error) {
 
-	respStr, err := httputil.DoGet(	TIMEOUT_IPFS, ipfs.Conf.URL, 
+	respStr, err := httputil.DoGet(TIMEOUT_IPFS, ipfs.Conf.URL,
 		"ipns/"+ipfs.Conf.IpnsID+"/xrates/latest/"+currencyCode+"/index.json", "")
 
 	if err != nil {
 		if strings.Contains(err.Error(), "Client.Timeout") {
-			respStr, err = httputil.DoGet(TIMEOUT_IPFS, ipfs.Conf.PublicURL, 
+			respStr, err = httputil.DoGet(TIMEOUT_IPFS, ipfs.Conf.PublicURL,
 				"ipns/"+ipfs.Conf.IpnsID+"/xrates/latest/"+currencyCode+"/index.json", "")
 		}
 	}
@@ -34,7 +33,7 @@ func (ipfs *Ipfs) GetLatestXRates(coinCode string, currencyCode string, exchange
 	return reformatIPFSLatestData(respStr), err
 }
 
-func (ipfs *Ipfs) GetHistoricalXRates(coinCode string, currencyCode string, exchange string, epochSec *int64)(
+func (ipfs *Ipfs) GetHistoricalXRates(coinCode string, currencyCode string, exchange string, epochSec *int64) (
 	*models.HistoricalXRate, error) {
 
 	var uriPathMinute, uriPathDay string

@@ -2,7 +2,7 @@ package cache
 
 import (
 	"database/sql"
-	"github.com/horizontalsystems/xrates-kit/models"
+	"github.com/horizontalsystems/go-xrates-kit/models"
 	"log"
 	"path/filepath"
 

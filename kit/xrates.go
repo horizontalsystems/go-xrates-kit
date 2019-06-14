@@ -1,13 +1,13 @@
 package kit
 
 import (
-	"github.com/horizontalsystems/xrates-kit/models"
+	"github.com/horizontalsystems/go-xrates-kit/models"
 	"log"
 	"strings"
 
-	"github.com/horizontalsystems/xrates-kit/cache"
-	"github.com/horizontalsystems/xrates-kit/config"
-	"github.com/horizontalsystems/xrates-kit/handler"
+	"github.com/horizontalsystems/go-xrates-kit/cache"
+	"github.com/horizontalsystems/go-xrates-kit/config"
+	"github.com/horizontalsystems/go-xrates-kit/handler"
 )
 
 type XRatesKit struct {
@@ -16,8 +16,8 @@ type XRatesKit struct {
 	cacheService             *cache.CacheService
 }
 
-type  LatestXRate models.LatestXRate
-type  HistoricalXRate models.HistoricalXRate
+type LatestXRate models.LatestXRate
+type HistoricalXRate models.HistoricalXRate
 
 // Init x-rates service, init and load configurations for Handlers
 func (xratesKit *XRatesKit) Init(dbPath string) {

@@ -2,11 +2,11 @@ package handler
 
 import (
 	"fmt"
-	"github.com/horizontalsystems/xrates-kit/models"
+	"github.com/horizontalsystems/go-xrates-kit/models"
 	"time"
 
 	"github.com/coinpaprika/coinpaprika-api-go-client/coinpaprika"
-	"github.com/horizontalsystems/xrates-kit/config"
+	"github.com/horizontalsystems/go-xrates-kit/config"
 )
 
 var coinpClient *coinpaprika.Client

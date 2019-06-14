@@ -1,13 +1,14 @@
 package handler
 
 import (
-	"github.com/horizontalsystems/xrates-kit/models"
+	"github.com/horizontalsystems/go-xrates-kit/models"
 )
 
 //----------------------------
-const TIMEOUT_GLOBAL = 6 
-const TIMEOUT_IPFS = 6 
-const TIMEOUT_COINPAPRIKA = 6 
+const TIMEOUT_GLOBAL = 6
+const TIMEOUT_IPFS = 6
+const TIMEOUT_COINPAPRIKA = 6
+
 //----------------------------
 
 //typeXRates interface

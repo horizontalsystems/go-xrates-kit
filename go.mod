@@ -1,4 +1,4 @@
-module github.com/horizontalsystems/xrates-kit
+module github.com/horizontalsystems/go-xrates-kit
 
 go 1.12
 

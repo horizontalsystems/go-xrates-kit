@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/horizontalsystems/xrates-kit/config"
-	dtutil "github.com/horizontalsystems/xrates-kit/util/datetime"
-	httputil "github.com/horizontalsystems/xrates-kit/util/http"
+	"github.com/horizontalsystems/go-xrates-kit/config"
+	dtutil "github.com/horizontalsystems/go-xrates-kit/util/datetime"
+	httputil "github.com/horizontalsystems/go-xrates-kit/util/http"
 )
 
 // -------------------------------
 var FiatXRatesHandler *FiatXRates
+
 // -------------------------------
 
 //FiatXRates handler object
@@ -39,7 +40,6 @@ func (fXRates *FiatXRates) GetLatestXRates(sCcy string, tCcy string, exchange st
 
 	return respStr, err
 }
-
 
 func (fXRates *FiatXRates) GetXRates(sCcy string, tCcy string,
 	exchange string, epochSec *int64) (FiatXRatesResponse, error) {
