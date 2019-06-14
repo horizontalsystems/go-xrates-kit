@@ -1,27 +1,22 @@
 package handler
 
-// XRates interface
+import (
+	"github.com/horizontalsystems/xrates-kit/models"
+)
+
+//----------------------------
+const TIMEOUT_GLOBAL = 6 
+const TIMEOUT_IPFS = 6 
+const TIMEOUT_COINPAPRIKA = 6 
+//----------------------------
+
+//typeXRates interface
 type XRates interface {
 
 	// GetLatestXRates gets latest rates of source and target currencies
-	GetLatestXRatesAsJSON(cCoin string, fCcy string, exchange string) (string, error)
+	GetLatestXRates(cCoin string, fCcy string, exchange string) (*models.LatestXRate, error)
 
 	// Fetches rates by Unix epoch time
-	GetXRatesAsJSON(cCoin string, fCcy string, exchange string, epochSec *int64) (string, error)
-}
-
-// LatestXRatesData is a container for latest exchange rates
-type LatestXRatesData struct {
-	Currency string `json:"currency"`
-	TimeStr  string `json:"time_str"`
-	Time     int64  `json:"time"`
-
-	Rates map[string]string `json:"rates"`
-}
-
-// XRatesData is a container for exchange rates
-type XRatesData struct {
-	Currency string `json:"currency"`
-	Rate     string `json:"rate"`
-	Time     int64  `json:"time"`
+	GetHistoricalXRates(cCoin string, fCcy string, exchange string, epochSec *int64) (
+		*models.HistoricalXRate, error)
 }

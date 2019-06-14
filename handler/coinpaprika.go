@@ -1,13 +1,12 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/horizontalsystems/xrates-kit/models"
 	"time"
 
 	"github.com/coinpaprika/coinpaprika-api-go-client/coinpaprika"
 	"github.com/horizontalsystems/xrates-kit/config"
-	"github.com/horizontalsystems/xrates-kit/currency"
 )
 
 var coinpClient *coinpaprika.Client
@@ -21,71 +20,74 @@ func init() {
 	coinpClient = coinpaprika.NewClient(nil)
 }
 
-func (coinp *CoinPaprika) GetLatestXRatesAsJSON(dCcy string, fCcy string, exchange string) (string, error) {
+func (cpHandler *CoinPaprika) GetLatestXRates(coinCode string, currencyCode string, exchange string) (
+	*models.LatestXRate, error) {
 
 	var err error
-	var response *LatestXRatesData
+	var response *models.LatestXRate
+	var index int
+
 	t := time.Now().UTC()
 
-	options := coinpaprika.TickersOptions{fCcy}
+	coin := models.COINS[coinCode]
+	options := coinpaprika.TickersOptions{currencyCode}
 
-	if dCcy == "" {
+	if coinCode == "" {
 
-		for index, ccy := range currency.GetDigitalCurrencies() {
+		for _, coin := range models.COINS {
 
-			options := coinpaprika.TickersOptions{fCcy}
-			ticker, err := coinpClient.Tickers.GetByID(currency.GetFullName(ccy), &options)
+			options := coinpaprika.TickersOptions{currencyCode}
+			ticker, err := coinpClient.Tickers.GetByID(coin.GetFullName(), &options)
 			if err != nil {
 
 			}
 
-			response = convertCoinpLatestData(response, ticker, dCcy, fCcy, &t)
+			response = convertCoinpLatestData(response, ticker, coinCode, currencyCode, &t)
 
 			// Coin paprika limits 10 request per second
 			if index%8 == 0 && index != 0 {
 				time.Sleep(1 * time.Second)
 			}
+			index++
 		}
 	} else {
 
-		ticker, err := coinpClient.Tickers.GetByID(currency.GetFullName(dCcy), &options)
+		ticker, err := coinpClient.Tickers.GetByID(coin.GetFullName(), &options)
 		if err != nil {
 		}
 
-		response = convertCoinpLatestData(response, ticker, dCcy, fCcy, &t)
+		response = convertCoinpLatestData(response, ticker, coinCode, currencyCode, &t)
 
 	}
 
-	bytes, err := json.Marshal(response)
-	if err != nil {
-	}
-
-	return string(bytes), err
+	return response, err
 }
 
-func (coinp *CoinPaprika) GetXRatesAsJSON(
-	dCcy string, fCcy string, exchange string, epochSec *int64) (string, error) {
+func (coinp *CoinPaprika) GetHistoricalXRates(
+	coinCode string, currencyCode string, exchange string, epochSec *int64) (*models.HistoricalXRate, error) {
 
 	options := coinpaprika.TickersHistoricalOptions{}
 	options.Start = time.Unix(*epochSec, 0).UTC()
-	options.Quote = currency.GetBaseFiatCurrency().ID
+	options.Quote = models.GetBaseCurreny().ID
 	options.Limit = 1
 
-	ticker, err := coinpClient.Tickers.GetHistoricalTickersByID(currency.GetFullName(dCcy), &options)
+	coin := models.COINS[coinCode]
+
+	ticker, err := coinpClient.Tickers.GetHistoricalTickersByID(coin.GetFullName(), &options)
 
 	if err != nil {
 
 	}
 
-	return convertCoinpData(ticker, dCcy, fCcy, &options.Start), err
+	return convertCoinpHistoricalData(ticker, coinCode, currencyCode, &options.Start), err
 
 }
 
-func convertCoinpLatestData(xratesData *LatestXRatesData,
-	ticker *coinpaprika.Ticker, dCcy string, fCcy string, timeObj *time.Time) *LatestXRatesData {
+func convertCoinpLatestData(xratesData *models.LatestXRate,
+	ticker *coinpaprika.Ticker, coinCode string, currencyCode string, timeObj *time.Time) *models.LatestXRate {
 
 	if xratesData == nil {
-		xratesData = &LatestXRatesData{fCcy, timeObj.String(), timeObj.Unix(), make(map[string]string)}
+		xratesData = &models.LatestXRate{currencyCode, timeObj.String(), timeObj.Unix(), make(map[string]string)}
 	}
 
 	for _, element := range ticker.Quotes {
@@ -98,30 +100,26 @@ func convertCoinpLatestData(xratesData *LatestXRatesData,
 	return xratesData
 }
 
-func convertCoinpData(
-	ticker []*coinpaprika.TickerHistorical, dCcy string, fCcy string, timeObj *time.Time) string {
+func convertCoinpHistoricalData(
+	ticker []*coinpaprika.TickerHistorical,
+	coinCode string, currencyCode string, timeObj *time.Time) *models.HistoricalXRate {
 
 	for _, element := range ticker {
 
-		baseCcy := currency.GetBaseFiatCurrency().ID
+		baseCcy := models.GetBaseCurreny().ID
 		tEpoch := timeObj.Unix()
 		var fxRate float64 = 1
 
-		if fCcy != baseCcy {
-			fxRes, _ := FiatXRatesHandler.GetXRates(baseCcy, fCcy, "", &tEpoch)
-			fxRate = fxRes.Rates[fCcy]
+		if currencyCode != baseCcy {
+			fxRes, _ := FiatXRatesHandler.GetXRates(baseCcy, currencyCode, "", &tEpoch)
+			fxRate = fxRes.Rates[currencyCode]
 		}
 
 		fxRate = fxRate * (*element.Price)
-		resp := map[string]XRatesData{}
-		resp[dCcy] = XRatesData{fCcy, fmt.Sprintf("%f", fxRate), element.Timestamp.Unix()}
 
-		bytes, err := json.Marshal(resp)
-		if err != nil {
-		}
-
-		return string(bytes)
+		return &models.HistoricalXRate{coinCode, currencyCode, fmt.Sprintf("%f", fxRate), timeObj.Unix()}
 	}
 
-	return ""
+	return nil
+
 }
