@@ -3,10 +3,13 @@ package main
 import (
 	"fmt"
 
-	"github.com/horizontalsystems/xrates-kit/config"
-	"github.com/horizontalsystems/xrates-kit/handler"
-	"github.com/horizontalsystems/xrates-kit/kit"
-	dtutils "github.com/horizontalsystems/xrates-kit/util/datetime"
+	//"time"
+
+	"github.com/horizontalsystems/go-xrates-kit/config"
+	"github.com/horizontalsystems/go-xrates-kit/handler"
+	"github.com/horizontalsystems/go-xrates-kit/kit"
+
+	dtutils "github.com/horizontalsystems/go-xrates-kit/util/datetime"
 )
 
 func main() {
@@ -17,13 +20,14 @@ func main() {
 
 	tunix := t.UTC().Unix()
 
-	xratesService := new(kit.XRatesKit)
-	xratesService.Init()
+	xratesKit := new(kit.XRatesKit)
+	xratesKit.Init(".")
 
-	//fmt.Println("Getting Data:", xratesService.Get("BTC", "USD", "", t.Unix()))
+	fmt.Println("Getting Data:", xratesKit.Get("BTC", "TRY", "", t.Unix()))
 
-	cpHandler := handler.CoinPaprika{&config.Get().CoinPaprika}
-	resp, _ := cpHandler.GetXRatesAsJSON("BTC", "TRY", "", &tunix)
+	cpHandler := handler.CoinPaprika{&config.Load().CoinPaprika}
+	resp, _ := cpHandler.GetHistoricalXRates("BTC", "TRY", "", &tunix)
 	fmt.Println("Getting Data:", resp)
 
+	_, _ = fmt.Scanln()
 }

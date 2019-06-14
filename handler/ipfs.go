@@ -3,12 +3,13 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/horizontalsystems/go-xrates-kit/models"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/horizontalsystems/xrates-kit/config"
-	httputil "github.com/horizontalsystems/xrates-kit/util/http"
+	"github.com/horizontalsystems/go-xrates-kit/config"
+	httputil "github.com/horizontalsystems/go-xrates-kit/util/http"
 )
 
 //Ipfs handler object
@@ -16,24 +17,24 @@ type Ipfs struct {
 	Conf *config.IpfsConfig
 }
 
-func (ipfs *Ipfs) GetLatestXRatesAsJSON(dCcy string, fCcy string, exchange string) (string, error) {
+func (ipfs *Ipfs) GetLatestXRates(coinCode string, currencyCode string, exchange string) (
+	*models.LatestXRate, error) {
 
-	respStr, err := httputil.DoGet(
-		6, ipfs.Conf.URL, "ipns/"+ipfs.Conf.IpnsID+"/xrates/latest/"+fCcy+"/index.json", "")
+	respStr, err := httputil.DoGet(TIMEOUT_IPFS, ipfs.Conf.URL,
+		"ipns/"+ipfs.Conf.IpnsID+"/xrates/latest/"+currencyCode+"/index.json", "")
 
 	if err != nil {
 		if strings.Contains(err.Error(), "Client.Timeout") {
-			respStr, err := httputil.DoGet(
-				6, ipfs.Conf.PublicURL, "ipns/"+ipfs.Conf.IpnsID+"/xrates/latest/"+fCcy+"/index.json", "")
-
-			return respStr, err
+			respStr, err = httputil.DoGet(TIMEOUT_IPFS, ipfs.Conf.PublicURL,
+				"ipns/"+ipfs.Conf.IpnsID+"/xrates/latest/"+currencyCode+"/index.json", "")
 		}
 	}
 
-	return respStr, err
+	return reformatIPFSLatestData(respStr), err
 }
 
-func (ipfs *Ipfs) GetXRatesAsJSON(dCcy string, fCcy string, exchange string, epochSec *int64) (string, error) {
+func (ipfs *Ipfs) GetHistoricalXRates(coinCode string, currencyCode string, exchange string, epochSec *int64) (
+	*models.HistoricalXRate, error) {
 
 	var uriPathMinute, uriPathDay string
 
@@ -42,50 +43,59 @@ func (ipfs *Ipfs) GetXRatesAsJSON(dCcy string, fCcy string, exchange string, epo
 	hour := timeSecObj.Hour()
 
 	uriPathDay = "ipns/" + ipfs.Conf.IpnsID +
-		"/xrates/historical/" + dCcy + "/" + fCcy + "/" +
+		"/xrates/historical/" + coinCode + "/" + currencyCode + "/" +
 		strconv.Itoa(year) + "/" +
 		fmt.Sprintf("%02d", int(month)) + "/" +
 		fmt.Sprintf("%02d", day)
 
 	uriPathMinute = uriPathDay + "/" + fmt.Sprintf("%02d", hour) + "/index.json"
 
-	respStr, err := httputil.DoGet(6, ipfs.Conf.URL, uriPathMinute, "")
+	respStr, err := httputil.DoGet(TIMEOUT_IPFS, ipfs.Conf.URL, uriPathMinute, "")
 
 	if err != nil {
 
 		if strings.Contains(err.Error(), "Client.Timeout") {
-			respStr1, err := httputil.DoGet(6, ipfs.Conf.PublicURL, uriPathDay, "")
+			respStr, err = httputil.DoGet(TIMEOUT_IPFS, ipfs.Conf.PublicURL, uriPathDay, "")
 
 			if err != nil {
 			}
-
-			respStr = respStr1
 
 		} else {
 			// if Minute data is not found try By DAY.
 			uriPathDay += "/index.json"
 
-			respStr1, err := httputil.DoGet(6, ipfs.Conf.URL, uriPathDay, "")
+			respStr, err = httputil.DoGet(TIMEOUT_IPFS, ipfs.Conf.URL, uriPathDay, "")
 
 			if err != nil {
 			}
-
-			respStr = respStr1
 		}
 	}
 
-	dataS := reformatIPFSResponse(respStr, dCcy, fCcy, &timeSecObj)
+	return reformatIPFSHistoricalData(respStr, coinCode, currencyCode, &timeSecObj), err
 
-	return dataS, err
 }
 
 //Change response json to XRates compatible format
-func reformatIPFSResponse(jsonData string, dCcy string, fCcy string, timeObj *time.Time) string {
+func reformatIPFSLatestData(jsonData string) *models.LatestXRate {
+
+	data := models.LatestXRate{}
+	err := json.Unmarshal([]byte(jsonData), &data)
+
+	if err != nil {
+
+	}
+
+	return &data
+}
+
+//Change response json to XRates compatible format
+func reformatIPFSHistoricalData(jsonData string, coinCode string,
+	currencyCode string, timeObj *time.Time) *models.HistoricalXRate {
 
 	var rate string
 
 	if jsonData == "" {
-		return ""
+		return nil
 	}
 
 	data := map[string]string{}
@@ -98,13 +108,5 @@ func reformatIPFSResponse(jsonData string, dCcy string, fCcy string, timeObj *ti
 		rate = data[minute]
 	}
 
-	rates := map[string]XRatesData{}
-	rates[dCcy] = XRatesData{fCcy, rate, timeObj.Unix()}
-
-	bytes, err := json.Marshal(rates)
-	if err != nil {
-	}
-
-	return string(bytes)
-
+	return &models.HistoricalXRate{coinCode, currencyCode, rate, timeObj.Unix()}
 }

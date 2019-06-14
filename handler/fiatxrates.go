@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/horizontalsystems/xrates-kit/config"
-	dtutil "github.com/horizontalsystems/xrates-kit/util/datetime"
-	httputil "github.com/horizontalsystems/xrates-kit/util/http"
+	"github.com/horizontalsystems/go-xrates-kit/config"
+	dtutil "github.com/horizontalsystems/go-xrates-kit/util/datetime"
+	httputil "github.com/horizontalsystems/go-xrates-kit/util/http"
 )
 
 // -------------------------------
@@ -26,26 +26,13 @@ type FiatXRatesResponse struct {
 }
 
 func init() {
-	FiatXRatesHandler = &FiatXRates{&config.Get().FiatXRates}
+	FiatXRatesHandler = &FiatXRates{&config.Load().FiatXRates}
 }
 
-func (fXRates *FiatXRates) GetLatestXRatesAsJSON(sCcy string, tCcy string, exchange string) (string, error) {
+func (fXRates *FiatXRates) GetLatestXRates(sCcy string, tCcy string, exchange string) (string, error) {
 
 	respStr, err := httputil.DoGet(
-		6, fXRates.Conf.APIURL, "/latest?base="+sCcy+"&symbols="+tCcy, "")
-
-	if err != nil {
-
-	}
-
-	return respStr, err
-}
-
-func (fXRates *FiatXRates) GetXRatesAsJSON(sCcy string, tCcy string,
-	exchange string, epochSec *int64) (string, error) {
-
-	respStr, err := httputil.DoGet(
-		6, fXRates.Conf.APIURL, dtutil.EpochToStr("", epochSec), "base="+sCcy+"&symbols="+tCcy)
+		TIMEOUT_GLOBAL, fXRates.Conf.APIURL, "/latest?base="+sCcy+"&symbols="+tCcy, "")
 
 	if err != nil {
 
@@ -58,7 +45,7 @@ func (fXRates *FiatXRates) GetXRates(sCcy string, tCcy string,
 	exchange string, epochSec *int64) (FiatXRatesResponse, error) {
 
 	respStr, err := httputil.DoGet(
-		6, fXRates.Conf.APIURL, dtutil.EpochToStr("", epochSec), "base="+sCcy+"&symbols="+tCcy)
+		TIMEOUT_GLOBAL, fXRates.Conf.APIURL, dtutil.EpochToStr("", epochSec), "base="+sCcy+"&symbols="+tCcy)
 
 	if err != nil {
 

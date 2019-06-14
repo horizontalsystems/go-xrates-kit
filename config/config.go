@@ -1,6 +1,6 @@
 package config
 
-var conf MainConfig
+var conf *MainConfig
 
 // MainConfig is a main configuration Object
 type MainConfig struct {
@@ -26,27 +26,20 @@ type FiatXRatesConfig struct {
 	APIURL string
 }
 
-func init() {
-	Load()
-}
-
 // Load config file
-func Load() MainConfig {
+func Load() *MainConfig {
 
-	conf = MainConfig{
-		IpfsConfig{
-			"https://ipfs-ext.horizontalsystems.xyz",
-			"https://ipfs.io",
-			"QmXTJZBMMRmBbPun6HFt3tmb3tfYF2usLPxFoacL7G5uMX"},
-		CoinPaprikaConfig{
-			"https://api.coinpaprika.com/v1"},
-		FiatXRatesConfig{
-			"https://api.exchangeratesapi.io"}}
+	if conf == nil {
+		conf = &MainConfig{
+			IpfsConfig{
+				"https://ipfs-ext.horizontalsystems.xyz",
+				"https://ipfs.io",
+				"QmXTJZBMMRmBbPun6HFt3tmb3tfYF2usLPxFoacL7G5uMX"},
+			CoinPaprikaConfig{
+				"https://api.coinpaprika.com/v1"},
+			FiatXRatesConfig{
+				"https://api.exchangeratesapi.io"}}
+	}
 
 	return conf
-}
-
-// Get config object
-func Get() *MainConfig {
-	return &conf
 }

@@ -1,67 +1,89 @@
 package kit
 
 import (
+	"github.com/horizontalsystems/go-xrates-kit/models"
+	"log"
 	"strings"
 
-	"github.com/horizontalsystems/xrates-kit/config"
-	"github.com/horizontalsystems/xrates-kit/handler"
+	"github.com/horizontalsystems/go-xrates-kit/cache"
+	"github.com/horizontalsystems/go-xrates-kit/config"
+	"github.com/horizontalsystems/go-xrates-kit/handler"
 )
 
 type XRatesKit struct {
 	conf                     *config.MainConfig
 	ipfsHandler, coinPaprika handler.XRates
+	cacheService             *cache.CacheService
 }
 
+type LatestXRate models.LatestXRate
+type HistoricalXRate models.HistoricalXRate
+
 // Init x-rates service, init and load configurations for Handlers
-func (xratesSrv *XRatesKit) Init() {
-	xratesSrv.conf = config.Get()
-	xratesSrv.ipfsHandler = &handler.Ipfs{&(xratesSrv.conf.Ipfs)}
-	xratesSrv.coinPaprika = &handler.CoinPaprika{&xratesSrv.conf.CoinPaprika}
+func (xratesKit *XRatesKit) Init(dbPath string) {
+
+	xratesKit.conf = config.Load()
+	xratesKit.ipfsHandler = &handler.Ipfs{&(xratesKit.conf.Ipfs)}
+	xratesKit.coinPaprika = &handler.CoinPaprika{&xratesKit.conf.CoinPaprika}
+
+	xratesKit.cacheService = &cache.CacheService{DBPath: dbPath}
+	xratesKit.cacheService.Init()
+
 }
 
 // GetLatest gets latest rates of source and target currencies
-func (xratesSrv *XRatesKit) GetLatest(
-	digCurrency string, fiatCurrency string, exchange string) string {
+func (xratesKit *XRatesKit) GetLatest(
+	coinCode string, currencyCode string, exchange string) *LatestXRate {
 
-	data, err := xratesSrv.ipfsHandler.GetLatestXRatesAsJSON(digCurrency, fiatCurrency, exchange)
+	currencyCode = strings.ToUpper(currencyCode)
+	coinCode = strings.ToUpper(coinCode)
 
-	fiatCurrency = strings.ToUpper(fiatCurrency)
-	digCurrency = strings.ToUpper(digCurrency)
+	data, err := xratesKit.ipfsHandler.GetLatestXRates(coinCode, currencyCode, exchange)
 
 	if err != nil {
 
 		// Get data from CoinPaprika
-		data, err := xratesSrv.coinPaprika.GetLatestXRatesAsJSON(digCurrency, fiatCurrency, exchange)
+		data, err = xratesKit.coinPaprika.GetLatestXRates(coinCode, currencyCode, exchange)
 
 		if err != nil {
-
+			//TODO
 		}
-
-		return data
 	}
 
-	return data
+	return (*LatestXRate)(data)
 }
 
 // Get method gets rates by Unix EPOCH date
-func (xratesSrv *XRatesKit) Get(
-	digCurrency string, fiatCurrency string, exchange string, epochSec int64) string {
+func (xratesKit *XRatesKit) Get(
+	coinCode string, currencyCode string, exchange string, epochSec int64) *HistoricalXRate {
 
-	fiatCurrency = strings.ToUpper(fiatCurrency)
-	digCurrency = strings.ToUpper(digCurrency)
+	currencyCode = strings.ToUpper(currencyCode)
+	coinCode = strings.ToUpper(coinCode)
 
-	data, err := xratesSrv.ipfsHandler.GetXRatesAsJSON(digCurrency, fiatCurrency, exchange, &epochSec)
+	cacheData := xratesKit.cacheService.Get(coinCode, currencyCode, exchange, epochSec)
 
-	if err != nil {
-		// Get data from CoinPaprika
-		data, err := xratesSrv.coinPaprika.GetXRatesAsJSON(digCurrency, fiatCurrency, exchange, &epochSec)
+	if cacheData == nil {
+		data, err := xratesKit.ipfsHandler.GetHistoricalXRates(coinCode, currencyCode, exchange, &epochSec)
 
 		if err != nil {
+			// Get data from CoinPaprika
+			data, err = xratesKit.coinPaprika.GetHistoricalXRates(coinCode, currencyCode, exchange, &epochSec)
 
+			if err != nil {
+
+			}
 		}
 
-		return data
-	}
+		//---------- Cache Data -------------------
+		go xratesKit.cacheService.Set(coinCode, currencyCode, exchange, epochSec, data)
+		log.Println("After set")
+		//-----------------------------------------
 
-	return data
+		return (*HistoricalXRate)(data)
+
+	} else {
+
+		log.Println("Data from Cache")
+		return (*HistoricalXRate)(cacheData)
+	}
 }
