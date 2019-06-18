@@ -20,54 +20,48 @@ func init() {
 	coinpClient = coinpaprika.NewClient(nil)
 }
 
-func (cpHandler *CoinPaprika) GetLatestXRates(coinCode string, currencyCode string, exchange string) (
-	*models.LatestXRate, error) {
+func (cpHandler *CoinPaprika) GetLatestXRates(currencyCode string, coinCodes *[]string) (*[]models.XRate, error) {
 
 	var err error
-	var response *models.LatestXRate
 	var index int
 
 	t := time.Now().UTC()
 
-	coin := models.COINS[coinCode]
-	options := coinpaprika.TickersOptions{currencyCode}
+	result := make([]models.XRate, len(*coinCodes))
 
-	if coinCode == "" {
+	for i, coinCode := range *coinCodes {
 
-		for _, coin := range models.COINS {
+		coin, ok := models.COINS[coinCode]
+		if ok {
 
 			options := coinpaprika.TickersOptions{currencyCode}
 			ticker, err := coinpClient.Tickers.GetByID(coin.GetFullName(), &options)
 			if err != nil {
+				return nil, err
+			} else {
 
+				data, ok := convertCoinpLatestData(ticker, coinCode, currencyCode, &t)
+
+				if ok {
+					result[index] = *data
+					index++
+				}
 			}
-
-			response = convertCoinpLatestData(response, ticker, coinCode, currencyCode, &t)
-
 			// Coin paprika limits 10 request per second
-			if index%8 == 0 && index != 0 {
+			if i%8 == 0 && i != 0 {
 				time.Sleep(1 * time.Second)
 			}
-			index++
 		}
-	} else {
-
-		ticker, err := coinpClient.Tickers.GetByID(coin.GetFullName(), &options)
-		if err != nil {
-		}
-
-		response = convertCoinpLatestData(response, ticker, coinCode, currencyCode, &t)
-
 	}
 
-	return response, err
+	return &result, err
 }
 
 func (coinp *CoinPaprika) GetHistoricalXRates(
-	coinCode string, currencyCode string, exchange string, epochSec *int64) (*models.HistoricalXRate, error) {
+	currencyCode string, coinCode string, timestamp *int64) (*models.XRate, error) {
 
 	options := coinpaprika.TickersHistoricalOptions{}
-	options.Start = time.Unix(*epochSec, 0).UTC()
+	options.Start = time.Unix(*timestamp, 0).UTC()
 	options.Quote = models.GetBaseCurreny().ID
 	options.Limit = 1
 
@@ -83,26 +77,19 @@ func (coinp *CoinPaprika) GetHistoricalXRates(
 
 }
 
-func convertCoinpLatestData(xratesData *models.LatestXRate,
-	ticker *coinpaprika.Ticker, coinCode string, currencyCode string, timeObj *time.Time) *models.LatestXRate {
-
-	if xratesData == nil {
-		xratesData = &models.LatestXRate{currencyCode, timeObj.String(), timeObj.Unix(), make(map[string]string)}
-	}
+func convertCoinpLatestData(ticker *coinpaprika.Ticker, coinCode string, currencyCode string, timeObj *time.Time) (*models.XRate, bool) {
 
 	for _, element := range ticker.Quotes {
 
-		xratesData.Rates[*ticker.Symbol] = fmt.Sprintf("%f", *element.Price)
+		return &models.XRate{coinCode, currencyCode, timeObj.Unix(), fmt.Sprintf("%f", *element.Price)}, true
 
-		break
 	}
 
-	return xratesData
+	return nil, false
 }
 
-func convertCoinpHistoricalData(
-	ticker []*coinpaprika.TickerHistorical,
-	coinCode string, currencyCode string, timeObj *time.Time) *models.HistoricalXRate {
+func convertCoinpHistoricalData(ticker []*coinpaprika.TickerHistorical,
+	coinCode string, currencyCode string, timeObj *time.Time) *models.XRate {
 
 	for _, element := range ticker {
 
@@ -117,9 +104,8 @@ func convertCoinpHistoricalData(
 
 		fxRate = fxRate * (*element.Price)
 
-		return &models.HistoricalXRate{coinCode, currencyCode, fmt.Sprintf("%f", fxRate), timeObj.Unix()}
+		return &models.XRate{coinCode, currencyCode, timeObj.Unix(), fmt.Sprintf("%f", fxRate)}
 	}
 
 	return nil
-
 }

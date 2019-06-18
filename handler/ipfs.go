@@ -17,8 +17,14 @@ type Ipfs struct {
 	Conf *config.IpfsConfig
 }
 
-func (ipfs *Ipfs) GetLatestXRates(coinCode string, currencyCode string, exchange string) (
-	*models.LatestXRate, error) {
+type ipfsLatestXRates struct {
+	CurrencyCode string            `json:"currency"`
+	Timestamp    int64             `json:"time"`
+	TimestampStr string            `json:"time_str"`
+	Rates        map[string]string `json:"rates"`
+}
+
+func (ipfs *Ipfs) GetLatestXRates(currencyCode string, coinCode *[]string) (*[]models.XRate, error) {
 
 	respStr, err := httputil.DoGet(TIMEOUT_IPFS, ipfs.Conf.URL,
 		"ipns/"+ipfs.Conf.IpnsID+"/xrates/latest/"+currencyCode+"/index.json", "")
@@ -30,15 +36,14 @@ func (ipfs *Ipfs) GetLatestXRates(coinCode string, currencyCode string, exchange
 		}
 	}
 
-	return reformatIPFSLatestData(respStr), err
+	return reformatIPFSLatestData(respStr, coinCode), err
 }
 
-func (ipfs *Ipfs) GetHistoricalXRates(coinCode string, currencyCode string, exchange string, epochSec *int64) (
-	*models.HistoricalXRate, error) {
+func (ipfs *Ipfs) GetHistoricalXRates(currencyCode string, coinCode string, timestamp *int64) (*models.XRate, error) {
 
 	var uriPathMinute, uriPathDay string
 
-	timeSecObj := time.Unix(*epochSec, 0).UTC()
+	timeSecObj := time.Unix(*timestamp, 0).UTC()
 	year, month, day := timeSecObj.Date()
 	hour := timeSecObj.Hour()
 
@@ -76,21 +81,30 @@ func (ipfs *Ipfs) GetHistoricalXRates(coinCode string, currencyCode string, exch
 }
 
 //Change response json to XRates compatible format
-func reformatIPFSLatestData(jsonData string) *models.LatestXRate {
+func reformatIPFSLatestData(jsonData string, coinCodes *[]string) *[]models.XRate {
 
-	data := models.LatestXRate{}
-	err := json.Unmarshal([]byte(jsonData), &data)
+	ipfsXRates := ipfsLatestXRates{}
+	err := json.Unmarshal([]byte(jsonData), &ipfsXRates)
 
 	if err != nil {
 
 	}
 
-	return &data
+	result := make([]models.XRate, len(*coinCodes))
+
+	for i, coinCode := range *coinCodes {
+
+		rate := ipfsXRates.Rates[coinCode]
+
+		result[i] = models.XRate{coinCode, ipfsXRates.CurrencyCode, ipfsXRates.Timestamp, rate}
+	}
+
+	return &result
 }
 
 //Change response json to XRates compatible format
 func reformatIPFSHistoricalData(jsonData string, coinCode string,
-	currencyCode string, timeObj *time.Time) *models.HistoricalXRate {
+	currencyCode string, timeObj *time.Time) *models.XRate {
 
 	var rate string
 
@@ -108,5 +122,5 @@ func reformatIPFSHistoricalData(jsonData string, coinCode string,
 		rate = data[minute]
 	}
 
-	return &models.HistoricalXRate{coinCode, currencyCode, rate, timeObj.Unix()}
+	return &models.XRate{coinCode, currencyCode, timeObj.Unix(), rate}
 }

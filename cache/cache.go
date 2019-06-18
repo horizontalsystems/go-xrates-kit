@@ -14,16 +14,35 @@ type CacheService struct {
 	db     *sql.DB
 }
 
-func createTable(db *sql.DB) {
+func createHistoricalRatesTable(db *sql.DB) {
 
-	log.Print("Creating table")
-	statement, _ := db.Prepare("CREATE TABLE IF NOT EXISTS xrates " +
-		"( id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+	log.Print("Creating historical rates table")
+
+	statement, _ := db.Prepare("CREATE TABLE IF NOT EXISTS xrates_historical " +
+		"( coin_code VARCHAR(6) NOT NULL,  " +
+		"  currency_code VARCHAR(6) NOT NULL,  " +
 		"  timestamp  INTEGER NOT NULL,  " +
-		"  source_ccy VARCHAR(6) NOT NULL,  " +
-		"  target_ccy VARCHAR(6) NOT NULL,  " +
-		"  exchange   VARCHAR(10) ,  " +
-		"  value      TEXT NOT NULL)")
+		"  rate      VARCHAR NOT NULL," +
+		"  exchange   VARCHAR(10),  " +
+		"  PRIMARY KEY(coin_code, currency_code, timestamp)" +
+		")")
+
+	statement.Exec()
+
+}
+
+func createLatestRatesTable(db *sql.DB) {
+
+	log.Print("Creating latest rates table")
+
+	statement, _ := db.Prepare("CREATE TABLE IF NOT EXISTS xrates_latest " +
+		"( coin_code VARCHAR(6) NOT NULL,  " +
+		"  currency_code VARCHAR(6) NOT NULL,  " +
+		"  timestamp  INTEGER NOT NULL,  " +
+		"  rate      VARCHAR NOT NULL," +
+		"  exchange   VARCHAR(10),  " +
+		"  PRIMARY KEY(coin_code, currency_code)" +
+		")")
 
 	statement.Exec()
 
@@ -41,44 +60,85 @@ func (srv *CacheService) Init() {
 
 	srv.db = dbase
 
-	createTable(dbase)
+	createHistoricalRatesTable(dbase)
+	createLatestRatesTable(dbase)
 }
 
-func (srv *CacheService) Get(sourceCurrency string, targetCurrency string,
-	exchange string, epochSec int64) *models.HistoricalXRate {
+func (srv *CacheService) GetHistorical(coinCode string, currencyCode string, timestamp int64) *models.XRate {
 
-	stmt, err := srv.db.Prepare("SELECT value FROM xrates WHERE " +
-		"source_ccy = ? AND target_ccy = ? AND timestamp = ?")
+	stmt, err := srv.db.Prepare("SELECT rate FROM xrates_historical WHERE " +
+		"coin_code = ? AND currency_code = ? AND timestamp = ?")
 
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
 
-	var jsonValue string
-	err = stmt.QueryRow(sourceCurrency, targetCurrency, epochSec).Scan(&jsonValue)
+	var rate string
+	err = stmt.QueryRow(coinCode, currencyCode, timestamp).Scan(&rate)
 	if err != nil {
 		//log.Fatal(err)
 		return nil
 	}
-	hRate := models.HistoricalXRate{}
-
-	return hRate.FromJsonString(jsonValue)
+	return &models.XRate{coinCode, currencyCode, timestamp, rate}
 }
 
-func (srv *CacheService) Set(sourceCurrency string, targetCurrency string,
-	exchange string, epochSec int64, xrate *models.HistoricalXRate) {
+func (srv *CacheService) SetHistorical(xRate *models.XRate) {
 
-	log.Println("Begin setting data")
+	log.Println("Begin setting data", xRate)
 
-	stmt, err := srv.db.Prepare("INSERT INTO xrates(source_ccy,target_ccy,timestamp,value) VALUES(?,?,?,?)")
+	stmt, err := srv.db.Prepare("INSERT OR REPLACE INTO xrates_historical(coin_code, currency_code, timestamp, rate) VALUES(?,?,?,?)")
 
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(sourceCurrency, targetCurrency, epochSec, xrate.ToJsonString())
+	_, err = stmt.Exec(xRate.CoinCode, xRate.CurrencyCode, xRate.Timestamp, xRate.Rate)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("Data saved to Cache")
+}
+
+func (srv *CacheService) GetLatest(coinCode string, currencyCode string) *models.XRate {
+
+	stmt, err := srv.db.Prepare("SELECT rate, timestamp FROM xrates_latest WHERE " +
+		"coin_code = ? AND currency_code = ?")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+
+	var rate string
+	var timestamp int64
+
+	err = stmt.QueryRow(coinCode, currencyCode).Scan(&rate, &timestamp)
+	if err != nil {
+		//log.Fatal(err)
+		return nil
+	}
+	log.Println("Got latest rate from cache ", rate, timestamp)
+	return &models.XRate{coinCode, currencyCode, timestamp, rate}
+}
+
+func (srv *CacheService) SetLatest(xRates *[]models.XRate) {
+
+	log.Println("Begin setting latest rate ", xRates)
+
+	stmt, err := srv.db.Prepare("INSERT OR REPLACE INTO xrates_latest(coin_code, currency_code, timestamp, rate) VALUES(?,?,?,?)")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+
+	for _, xRate := range *xRates {
+		_, err = stmt.Exec(xRate.CoinCode, xRate.CurrencyCode, xRate.Timestamp, xRate.Rate)
+	}
 
 	if err != nil {
 		log.Fatal(err)

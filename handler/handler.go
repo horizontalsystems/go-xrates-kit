@@ -15,9 +15,8 @@ const TIMEOUT_COINPAPRIKA = 6
 type XRates interface {
 
 	// GetLatestXRates gets latest rates of source and target currencies
-	GetLatestXRates(cCoin string, fCcy string, exchange string) (*models.LatestXRate, error)
+	GetLatestXRates(currencyCode string, coinCodes *[]string) (*[]models.XRate, error)
 
 	// Fetches rates by Unix epoch time
-	GetHistoricalXRates(cCoin string, fCcy string, exchange string, epochSec *int64) (
-		*models.HistoricalXRate, error)
+	GetHistoricalXRates(currencyCode string, coinCode string, timestamp *int64) (*models.XRate, error)
 }
