@@ -16,8 +16,7 @@ type XRatesKit struct {
 	cacheService             *cache.CacheService
 }
 
-type LatestXRate models.LatestXRate
-type HistoricalXRate models.HistoricalXRate
+type XRate models.XRate
 
 // Init x-rates service, init and load configurations for Handlers
 func (xratesKit *XRatesKit) Init(dbPath string) {
@@ -31,59 +30,96 @@ func (xratesKit *XRatesKit) Init(dbPath string) {
 
 }
 
-// GetLatest gets latest rates of source and target currencies
-func (xratesKit *XRatesKit) GetLatest(
-	coinCode string, currencyCode string, exchange string) *LatestXRate {
-
+func (xratesKit *XRatesKit) GetHistorical(currencyCode string, coinCode string, timestamp int64) *XRate {
 	currencyCode = strings.ToUpper(currencyCode)
 	coinCode = strings.ToUpper(coinCode)
 
-	data, err := xratesKit.ipfsHandler.GetLatestXRates(coinCode, currencyCode, exchange)
+	data, err := xratesKit.ipfsHandler.GetHistoricalXRates(currencyCode, coinCode, &timestamp)
+
+	if err != nil {
+		// Get data from CoinPaprika
+		data, err = xratesKit.coinPaprika.GetHistoricalXRates(currencyCode, coinCode, &timestamp)
+
+		if err != nil {
+
+		}
+	}
+
+	//---------- Cache Data -------------------
+	xratesKit.cacheService.SetHistorical(data)
+
+	log.Println("After set")
+	//-----------------------------------------
+
+	return (*XRate)(data)
+}
+
+func (xratesKit *XRatesKit) GetHistoricalCached(currencyCode string, coinCode string, timestamp int64) *XRate {
+	currencyCode = strings.ToUpper(currencyCode)
+	coinCode = strings.ToUpper(coinCode)
+
+	return (*XRate)(xratesKit.cacheService.GetHistorical(coinCode, currencyCode, timestamp))
+}
+
+//GetLatest gets latest rates of source and target currencies
+func (xratesKit *XRatesKit) GetLatest(currencyCode string, coinCodes []string) *[]XRate {
+
+	currencyCode = strings.ToUpper(currencyCode)
+	//coinCode = strings.ToUpper(coinCode)
+
+	data, err := xratesKit.ipfsHandler.GetLatestXRates(currencyCode, &coinCodes)
 
 	if err != nil {
 
 		// Get data from CoinPaprika
-		data, err = xratesKit.coinPaprika.GetLatestXRates(coinCode, currencyCode, exchange)
+		data, err = xratesKit.coinPaprika.GetLatestXRates(currencyCode, &coinCodes)
 
 		if err != nil {
 			//TODO
 		}
 	}
+	//---------- Cache Data -------------------
 
-	return (*LatestXRate)(data)
+	xratesKit.cacheService.SetLatest(data)
+
+	//-----------------------------------------
+
+	log.Println(data)
+
+	var result = make([]XRate, len(*data))
+	for i, xrate := range *data {
+		result[i] = XRate(xrate)
+	}
+	return &result
 }
 
-// Get method gets rates by Unix EPOCH date
-func (xratesKit *XRatesKit) Get(
-	coinCode string, currencyCode string, exchange string, epochSec int64) *HistoricalXRate {
+//GetLatest gets latest rates of source and target currencies
+func (xratesKit *XRatesKit) GetLatestCached(currencyCode string, coinCodes []string) *[]XRate {
 
 	currencyCode = strings.ToUpper(currencyCode)
-	coinCode = strings.ToUpper(coinCode)
+	result := make([]XRate, len(coinCodes))
 
-	cacheData := xratesKit.cacheService.Get(coinCode, currencyCode, exchange, epochSec)
+	for i, coinCode := range coinCodes {
+		coinCode = strings.ToUpper(coinCode)
+		xrate := xratesKit.cacheService.GetLatest(coinCode, currencyCode)
 
-	if cacheData == nil {
-		data, err := xratesKit.ipfsHandler.GetHistoricalXRates(coinCode, currencyCode, exchange, &epochSec)
+		result[i] = XRate(*xrate)
 
-		if err != nil {
-			// Get data from CoinPaprika
-			data, err = xratesKit.coinPaprika.GetHistoricalXRates(coinCode, currencyCode, exchange, &epochSec)
-
-			if err != nil {
-
-			}
-		}
-
-		//---------- Cache Data -------------------
-		go xratesKit.cacheService.Set(coinCode, currencyCode, exchange, epochSec, data)
-		log.Println("After set")
-		//-----------------------------------------
-
-		return (*HistoricalXRate)(data)
-
-	} else {
-
-		log.Println("Data from Cache")
-		return (*HistoricalXRate)(cacheData)
 	}
+	return &result
 }
+
+//
+////---------------------------Subscription------------------------------------
+//
+//type LatestRateListener interface {
+//	 OnUpdate(rates []XRate)
+//}
+//
+//func (xratesKit *XRatesKit)subscribeToLatestRates(currencyCode string, coinCode []string, listener LatestRateListener) {
+//
+//	// every 3minutes fetch latest rate
+//	// save to cache
+//	// call listener.OnUpdate
+//
+//}
