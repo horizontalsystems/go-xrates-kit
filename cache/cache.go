@@ -5,6 +5,7 @@ import (
 	"github.com/horizontalsystems/go-xrates-kit/models"
 	"log"
 	"path/filepath"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -75,7 +76,7 @@ func (srv *CacheService) GetHistorical(coinCode string, currencyCode string, tim
 	defer stmt.Close()
 
 	var rate string
-	err = stmt.QueryRow(coinCode, currencyCode, timestamp).Scan(&rate)
+	err = stmt.QueryRow(strings.ToUpper(coinCode), strings.ToUpper(currencyCode), timestamp).Scan(&rate)
 	if err != nil {
 		//log.Fatal(err)
 		return nil
@@ -94,7 +95,7 @@ func (srv *CacheService) SetHistorical(xRate *models.XRate) {
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(xRate.CoinCode, xRate.CurrencyCode, xRate.Timestamp, xRate.Rate)
+	_, err = stmt.Exec(strings.ToUpper(xRate.CoinCode), strings.ToUpper(xRate.CurrencyCode), xRate.Timestamp, xRate.Rate)
 
 	if err != nil {
 		log.Fatal(err)
@@ -116,16 +117,18 @@ func (srv *CacheService) GetLatest(coinCode string, currencyCode string) *models
 	var rate string
 	var timestamp int64
 
-	err = stmt.QueryRow(coinCode, currencyCode).Scan(&rate, &timestamp)
+	err = stmt.QueryRow(strings.ToUpper(coinCode), strings.ToUpper(currencyCode)).Scan(&rate, &timestamp)
 	if err != nil {
 		//log.Fatal(err)
-		return nil
+		rate = ""
+		timestamp = -1
 	}
+
 	log.Println("Got latest rate from cache ", rate, timestamp)
 	return &models.XRate{coinCode, currencyCode, timestamp, rate}
 }
 
-func (srv *CacheService) SetLatest(xRates *[]models.XRate) {
+func (srv *CacheService) SetLatest(xRates []models.XRate) {
 
 	log.Println("Begin setting latest rate ", xRates)
 
@@ -136,8 +139,8 @@ func (srv *CacheService) SetLatest(xRates *[]models.XRate) {
 	}
 	defer stmt.Close()
 
-	for _, xRate := range *xRates {
-		_, err = stmt.Exec(xRate.CoinCode, xRate.CurrencyCode, xRate.Timestamp, xRate.Rate)
+	for _, xRate := range xRates {
+		_, err = stmt.Exec(strings.ToUpper(xRate.CoinCode), strings.ToUpper(xRate.CurrencyCode), xRate.Timestamp, xRate.Rate)
 	}
 
 	if err != nil {
