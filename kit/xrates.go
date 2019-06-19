@@ -1,13 +1,12 @@
 package kit
 
 import (
-	"github.com/horizontalsystems/go-xrates-kit/models"
-	"log"
-	"strings"
-
 	"github.com/horizontalsystems/go-xrates-kit/cache"
 	"github.com/horizontalsystems/go-xrates-kit/config"
 	"github.com/horizontalsystems/go-xrates-kit/handler"
+	"log"
+	"strings"
+	"time"
 )
 
 type XRatesKit struct {
@@ -15,8 +14,6 @@ type XRatesKit struct {
 	ipfsHandler, coinPaprika handler.XRates
 	cacheService             *cache.CacheService
 }
-
-type XRate models.XRate
 
 // Init x-rates service, init and load configurations for Handlers
 func (xratesKit *XRatesKit) Init(dbPath string) {
@@ -55,27 +52,22 @@ func (xratesKit *XRatesKit) GetHistorical(currencyCode string, coinCode string, 
 }
 
 func (xratesKit *XRatesKit) GetHistoricalCached(currencyCode string, coinCode string, timestamp int64) *XRate {
-	currencyCode = strings.ToUpper(currencyCode)
-	coinCode = strings.ToUpper(coinCode)
 
 	return (*XRate)(xratesKit.cacheService.GetHistorical(coinCode, currencyCode, timestamp))
 }
 
 //GetLatest gets latest rates of source and target currencies
-func (xratesKit *XRatesKit) GetLatest(currencyCode string, coinCodes []string) *[]XRate {
+func (xratesKit *XRatesKit) GetLatest(currencyCode string, coinCodes *CoinCodes) *XRates {
 
-	currencyCode = strings.ToUpper(currencyCode)
-	//coinCode = strings.ToUpper(coinCode)
-
-	data, err := xratesKit.ipfsHandler.GetLatestXRates(currencyCode, &coinCodes)
+	data, err := xratesKit.ipfsHandler.GetLatestXRates(currencyCode, coinCodes.toStringArray())
 
 	if err != nil {
 
 		// Get data from CoinPaprika
-		data, err = xratesKit.coinPaprika.GetLatestXRates(currencyCode, &coinCodes)
+		data, err = xratesKit.coinPaprika.GetLatestXRates(currencyCode, coinCodes.toStringArray())
 
 		if err != nil {
-			//TODO
+			return nil
 		}
 	}
 	//---------- Cache Data -------------------
@@ -86,40 +78,106 @@ func (xratesKit *XRatesKit) GetLatest(currencyCode string, coinCodes []string) *
 
 	log.Println(data)
 
-	var result = make([]XRate, len(*data))
-	for i, xrate := range *data {
+	var result = make([]XRate, len(data))
+	for i, xrate := range data {
 		result[i] = XRate(xrate)
 	}
-	return &result
+	return &XRates{result}
 }
 
 //GetLatest gets latest rates of source and target currencies
-func (xratesKit *XRatesKit) GetLatestCached(currencyCode string, coinCodes []string) *[]XRate {
+func (xratesKit *XRatesKit) GetLatestCached(currencyCode string, coinCodes *CoinCodes) *XRates {
 
 	currencyCode = strings.ToUpper(currencyCode)
-	result := make([]XRate, len(coinCodes))
+	result := make([]XRate, coinCodes.Size())
 
-	for i, coinCode := range coinCodes {
+	for i, coinCode := range coinCodes.toStringArray() {
 		coinCode = strings.ToUpper(coinCode)
 		xrate := xratesKit.cacheService.GetLatest(coinCode, currencyCode)
-
 		result[i] = XRate(*xrate)
-
 	}
-	return &result
+
+	return &XRates{result}
 }
 
 //
 ////---------------------------Subscription------------------------------------
-//
-//type LatestRateListener interface {
-//	 OnUpdate(rates []XRate)
-//}
-//
-//func (xratesKit *XRatesKit)subscribeToLatestRates(currencyCode string, coinCode []string, listener LatestRateListener) {
-//
-//	// every 3minutes fetch latest rate
-//	// save to cache
-//	// call listener.OnUpdate
-//
-//}
+
+var latestRatesSyncer LatestRatesSyncer
+
+type LatestRateListener interface {
+	OnUpdate(rates *XRates)
+}
+
+func (xratesKit *XRatesKit) SubscribeToLatestRates(syncIntervalSecs int, currencyCode string, coinCodes *CoinCodes,
+	listener LatestRateListener) {
+
+	if latestRatesSyncer.started {
+		latestRatesSyncer.Channel <- LatestRatesChannelItem{currencyCode, coinCodes, listener, syncIntervalSecs}
+	} else {
+		go latestRatesSyncer.start(xratesKit, syncIntervalSecs, currencyCode, coinCodes, listener)
+	}
+
+	//go startSyncerJob(xratesKit, syncIntervalSecs, currencyCode, coinCodes, listener)
+
+}
+
+type LatestRatesChannelItem struct {
+	currencyCode          string
+	coinCodes             *CoinCodes
+	listener              LatestRateListener
+	syncIntervalInSeconds int
+}
+
+type LatestRatesSyncer struct {
+	started               bool
+	currencyCode          string
+	coinCodes             *CoinCodes
+	listener              LatestRateListener
+	syncIntervalInSeconds int
+	Channel               chan LatestRatesChannelItem
+}
+
+func (s *LatestRatesSyncer) start(xratesKit *XRatesKit, syncIntervalSecs int, currencyCode string, coinCodes *CoinCodes,
+	listener LatestRateListener) {
+
+	latestRatesSyncer.started = true
+	latestRatesSyncer.Channel = make(chan LatestRatesChannelItem)
+	latestRatesSyncer.coinCodes = coinCodes
+	latestRatesSyncer.currencyCode = currencyCode
+	latestRatesSyncer.listener = listener
+	latestRatesSyncer.syncIntervalInSeconds = syncIntervalSecs
+
+	for {
+
+		select {
+		case channelItem := <-s.Channel:
+			{
+				log.Print("FROM CHANNEL ", channelItem)
+
+				s.currencyCode = channelItem.currencyCode
+				s.syncIntervalInSeconds = channelItem.syncIntervalInSeconds
+				s.coinCodes = channelItem.coinCodes
+				s.listener = channelItem.listener
+			}
+
+		default:
+			{
+				log.Print("DEFAULT")
+
+				latestRates := xratesKit.GetLatest(s.currencyCode, s.coinCodes)
+
+				log.Print("fetched latest rates", latestRates)
+
+				if latestRates != nil {
+					s.listener.OnUpdate(latestRates)
+				}
+
+				time.Sleep(time.Second * time.Duration(s.syncIntervalInSeconds))
+
+				log.Print("waked up")
+			}
+
+		}
+	}
+}

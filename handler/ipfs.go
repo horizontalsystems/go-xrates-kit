@@ -24,19 +24,19 @@ type ipfsLatestXRates struct {
 	Rates        map[string]string `json:"rates"`
 }
 
-func (ipfs *Ipfs) GetLatestXRates(currencyCode string, coinCode *[]string) (*[]models.XRate, error) {
+func (ipfs *Ipfs) GetLatestXRates(currencyCode string, coinCodes []string) ([]models.XRate, error) {
 
 	respStr, err := httputil.DoGet(TIMEOUT_IPFS, ipfs.Conf.URL,
-		"ipns/"+ipfs.Conf.IpnsID+"/xrates/latest/"+currencyCode+"/index.json", "")
+		"ipns/"+ipfs.Conf.IpnsID+"/xrates/latest/"+strings.ToUpper(currencyCode)+"/index.json", "")
 
 	if err != nil {
 		if strings.Contains(err.Error(), "Client.Timeout") {
 			respStr, err = httputil.DoGet(TIMEOUT_IPFS, ipfs.Conf.PublicURL,
-				"ipns/"+ipfs.Conf.IpnsID+"/xrates/latest/"+currencyCode+"/index.json", "")
+				"ipns/"+ipfs.Conf.IpnsID+"/xrates/latest/"+strings.ToUpper(currencyCode)+"/index.json", "")
 		}
 	}
 
-	return reformatIPFSLatestData(respStr, coinCode), err
+	return reformatIPFSLatestData(respStr, coinCodes), err
 }
 
 func (ipfs *Ipfs) GetHistoricalXRates(currencyCode string, coinCode string, timestamp *int64) (*models.XRate, error) {
@@ -48,7 +48,7 @@ func (ipfs *Ipfs) GetHistoricalXRates(currencyCode string, coinCode string, time
 	hour := timeSecObj.Hour()
 
 	uriPathDay = "ipns/" + ipfs.Conf.IpnsID +
-		"/xrates/historical/" + coinCode + "/" + currencyCode + "/" +
+		"/xrates/historical/" + strings.ToUpper(coinCode) + "/" + strings.ToUpper(currencyCode) + "/" +
 		strconv.Itoa(year) + "/" +
 		fmt.Sprintf("%02d", int(month)) + "/" +
 		fmt.Sprintf("%02d", day)
@@ -81,7 +81,7 @@ func (ipfs *Ipfs) GetHistoricalXRates(currencyCode string, coinCode string, time
 }
 
 //Change response json to XRates compatible format
-func reformatIPFSLatestData(jsonData string, coinCodes *[]string) *[]models.XRate {
+func reformatIPFSLatestData(jsonData string, coinCodes []string) []models.XRate {
 
 	ipfsXRates := ipfsLatestXRates{}
 	err := json.Unmarshal([]byte(jsonData), &ipfsXRates)
@@ -90,16 +90,16 @@ func reformatIPFSLatestData(jsonData string, coinCodes *[]string) *[]models.XRat
 
 	}
 
-	result := make([]models.XRate, len(*coinCodes))
+	result := make([]models.XRate, len(coinCodes))
 
-	for i, coinCode := range *coinCodes {
+	for i, coinCode := range coinCodes {
 
-		rate := ipfsXRates.Rates[coinCode]
+		rate := ipfsXRates.Rates[strings.ToUpper(coinCode)]
 
 		result[i] = models.XRate{coinCode, ipfsXRates.CurrencyCode, ipfsXRates.Timestamp, rate}
 	}
 
-	return &result
+	return result
 }
 
 //Change response json to XRates compatible format

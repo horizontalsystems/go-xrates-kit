@@ -20,16 +20,16 @@ func init() {
 	coinpClient = coinpaprika.NewClient(nil)
 }
 
-func (cpHandler *CoinPaprika) GetLatestXRates(currencyCode string, coinCodes *[]string) (*[]models.XRate, error) {
+func (cpHandler *CoinPaprika) GetLatestXRates(currencyCode string, coinCodes []string) ([]models.XRate, error) {
 
 	var err error
 	var index int
 
 	t := time.Now().UTC()
 
-	result := make([]models.XRate, len(*coinCodes))
+	result := make([]models.XRate, len(coinCodes))
 
-	for i, coinCode := range *coinCodes {
+	for i, coinCode := range coinCodes {
 
 		coin, ok := models.COINS[coinCode]
 		if ok {
@@ -54,7 +54,7 @@ func (cpHandler *CoinPaprika) GetLatestXRates(currencyCode string, coinCodes *[]
 		}
 	}
 
-	return &result, err
+	return result, err
 }
 
 func (coinp *CoinPaprika) GetHistoricalXRates(
